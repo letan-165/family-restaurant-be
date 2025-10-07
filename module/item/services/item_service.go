@@ -1,6 +1,10 @@
 package services
 
 import (
+	"context"
+	"errors"
+	"log"
+	"myapp/common/errors_code"
 	"myapp/common/utils"
 	"myapp/config"
 	models "myapp/module/item/models"
@@ -8,12 +12,22 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var itemCollection *mongo.Collection
+var itemCollection = config.ItemCollection
 
 func InitCollections() {
 	itemCollection = config.DB.Collection("items")
+	indexModel := mongo.IndexModel{
+		Keys:    bson.M{"name": 1},
+		Options: options.Index().SetUnique(true),
+	}
+
+	_, err := itemCollection.Indexes().CreateOne(context.TODO(), indexModel)
+	if err != nil {
+		log.Fatalf("Failed to create index: %v", err)
+	}
 }
 
 func CreateItem(item models.Item) (*primitive.ObjectID, error) {
@@ -21,8 +35,15 @@ func CreateItem(item models.Item) (*primitive.ObjectID, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
+	if !item.Type.IsValid() {
+		return nil, errors_code.TYPE_ITEM_INVALID
+	}
+
 	_, err := itemCollection.InsertOne(ctx, item)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, errors_code.ITEM_EXISTS
+		}
 		return nil, err
 	}
 	return &item.ID, nil
@@ -53,12 +74,20 @@ func GetItemByID(id string) (*models.Item, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	objID, _ := primitive.ObjectIDFromHex(id)
-	var item models.Item
-	err := itemCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&item)
+	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, err
 	}
+
+	var item models.Item
+	err = itemCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&item)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, errors_code.ITEM_NO_EXISTS
+		}
+		return nil, err
+	}
+
 	return &item, nil
 }
 
@@ -66,7 +95,11 @@ func UpdateItem(item models.Item) error {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	_, err := itemCollection.UpdateOne(
+	if !item.Type.IsValid() {
+		return errors_code.TYPE_ITEM_INVALID
+	}
+
+	res, err := itemCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": item.ID},
 		bson.M{"$set": bson.M{
@@ -75,7 +108,16 @@ func UpdateItem(item models.Item) error {
 			"price": item.Price,
 		}},
 	)
-	return err
+
+	if err != nil {
+		return err
+	}
+
+	if res.MatchedCount == 0 {
+		return errors_code.ITEM_NO_EXISTS
+	}
+
+	return nil
 }
 
 func DeleteItem(id string) error {
@@ -83,6 +125,15 @@ func DeleteItem(id string) error {
 	defer cancel()
 
 	objID, _ := primitive.ObjectIDFromHex(id)
-	_, err := itemCollection.DeleteOne(ctx, bson.M{"_id": objID})
-	return err
+	res, err := itemCollection.DeleteOne(ctx, bson.M{"_id": objID})
+
+	if err != nil {
+		return err
+	}
+
+	if res.DeletedCount == 0 {
+		return errors_code.ITEM_NO_EXISTS
+	}
+
+	return nil
 }

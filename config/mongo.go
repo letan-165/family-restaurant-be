@@ -1,16 +1,19 @@
 package config
 
 import (
+	"context"
 	"log"
 	"myapp/common/utils"
 	"os"
 
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var DB *mongo.Database
+var ItemCollection *mongo.Collection
 
 func ConnectMongo() {
 	err := godotenv.Load()
@@ -30,11 +33,25 @@ func ConnectMongo() {
 		log.Fatal(err)
 	}
 
-	err = client.Ping(ctx, nil)
-	if err != nil {
+	if err = client.Ping(ctx, nil); err != nil {
 		log.Fatal(err)
 	}
 
 	DB = client.Database(dbName)
 	log.Println("Connected to MongoDB Atlas")
+
+	initCollections()
+}
+
+func initCollections() {
+	ItemCollection = DB.Collection("items")
+	indexModel := mongo.IndexModel{
+		Keys:    bson.M{"name": 1},
+		Options: options.Index().SetUnique(true),
+	}
+
+	_, err := ItemCollection.Indexes().CreateOne(context.TODO(), indexModel)
+	if err != nil {
+		log.Fatalf("Failed to create index: %v", err)
+	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"myapp/common/middlewares"
 	"myapp/config"
 	"myapp/module/item/routes"
 	"myapp/module/item/services"
@@ -13,6 +14,8 @@ func main() {
 	services.InitCollections()
 
 	r := gin.Default()
+	r.Use(middlewares.TrimJSONMiddleware())
+
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
