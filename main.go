@@ -4,14 +4,12 @@ import (
 	"myapp/common/middlewares"
 	"myapp/config"
 	"myapp/module/item/routes"
-	"myapp/module/item/services"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	config.ConnectMongo()
-	services.InitCollections()
 
 	r := gin.Default()
 	r.Use(middlewares.TrimJSONMiddleware())

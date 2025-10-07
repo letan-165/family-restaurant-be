@@ -1,9 +1,7 @@
 package services
 
 import (
-	"context"
 	"errors"
-	"log"
 	"myapp/common/errors_code"
 	"myapp/common/utils"
 	"myapp/config"
@@ -12,23 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-var itemCollection = config.ItemCollection
-
-func InitCollections() {
-	itemCollection = config.DB.Collection("items")
-	indexModel := mongo.IndexModel{
-		Keys:    bson.M{"name": 1},
-		Options: options.Index().SetUnique(true),
-	}
-
-	_, err := itemCollection.Indexes().CreateOne(context.TODO(), indexModel)
-	if err != nil {
-		log.Fatalf("Failed to create index: %v", err)
-	}
-}
 
 func CreateItem(item models.Item) (*primitive.ObjectID, error) {
 	item.ID = primitive.NewObjectID()
@@ -39,7 +21,7 @@ func CreateItem(item models.Item) (*primitive.ObjectID, error) {
 		return nil, errors_code.TYPE_ITEM_INVALID
 	}
 
-	_, err := itemCollection.InsertOne(ctx, item)
+	_, err := config.ItemCollection.InsertOne(ctx, item)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return nil, errors_code.ITEM_EXISTS
@@ -53,7 +35,7 @@ func GetAllItems() ([]models.Item, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	cursor, err := itemCollection.Find(ctx, bson.M{})
+	cursor, err := config.ItemCollection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +62,7 @@ func GetItemByID(id string) (*models.Item, error) {
 	}
 
 	var item models.Item
-	err = itemCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&item)
+	err = config.ItemCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&item)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors_code.ITEM_NO_EXISTS
@@ -99,7 +81,7 @@ func UpdateItem(item models.Item) error {
 		return errors_code.TYPE_ITEM_INVALID
 	}
 
-	res, err := itemCollection.UpdateOne(
+	res, err := config.ItemCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": item.ID},
 		bson.M{"$set": bson.M{
@@ -125,7 +107,7 @@ func DeleteItem(id string) error {
 	defer cancel()
 
 	objID, _ := primitive.ObjectIDFromHex(id)
-	res, err := itemCollection.DeleteOne(ctx, bson.M{"_id": objID})
+	res, err := config.ItemCollection.DeleteOne(ctx, bson.M{"_id": objID})
 
 	if err != nil {
 		return err

@@ -14,6 +14,7 @@ import (
 
 var DB *mongo.Database
 var ItemCollection *mongo.Collection
+var OrderCollection *mongo.Collection
 
 func ConnectMongo() {
 	err := godotenv.Load()
@@ -40,10 +41,10 @@ func ConnectMongo() {
 	DB = client.Database(dbName)
 	log.Println("Connected to MongoDB Atlas")
 
-	initCollections()
+	InitCollections()
 }
 
-func initCollections() {
+func InitCollections() {
 	ItemCollection = DB.Collection("items")
 	indexModel := mongo.IndexModel{
 		Keys:    bson.M{"name": 1},
@@ -54,4 +55,6 @@ func initCollections() {
 	if err != nil {
 		log.Fatalf("Failed to create index: %v", err)
 	}
+
+	OrderCollection = DB.Collection("orders")
 }

@@ -7,9 +7,9 @@ import (
 type ItemType string
 
 const (
-	ItemMain  ItemType = "MAIN"
-	ItemSide  ItemType = "SIDE"
-	ItemDrink ItemType = "DRINK"
+	MAIN  ItemType = "MAIN"
+	SIDE  ItemType = "SIDE"
+	DRINK ItemType = "DRINK"
 )
 
 type Item struct {
@@ -21,7 +21,7 @@ type Item struct {
 
 func (t ItemType) IsValid() bool {
 	switch t {
-	case ItemMain, ItemSide, ItemDrink:
+	case MAIN, SIDE, DRINK:
 		return true
 	default:
 		return false
