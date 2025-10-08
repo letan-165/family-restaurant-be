@@ -3,7 +3,8 @@ package main
 import (
 	"myapp/common/middlewares"
 	"myapp/config"
-	"myapp/module/item/routes"
+	routes_item "myapp/module/item/routes"
+	routes_order "myapp/module/order/routers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,6 +19,7 @@ func main() {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-	routes.ItemRoutes(r)
+	routes_item.ItemRoutes(r)
+	routes_order.OrderRoutes(r)
 	r.Run(":8080")
 }

@@ -15,6 +15,7 @@ import (
 var DB *mongo.Database
 var ItemCollection *mongo.Collection
 var OrderCollection *mongo.Collection
+var UserCollection *mongo.Collection
 
 func ConnectMongo() {
 	err := godotenv.Load()
@@ -57,4 +58,5 @@ func InitCollections() {
 	}
 
 	OrderCollection = DB.Collection("orders")
+	UserCollection = DB.Collection("users")
 }

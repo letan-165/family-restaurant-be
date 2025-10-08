@@ -12,25 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func CreateItem(item models.Item) (*primitive.ObjectID, error) {
-	item.ID = primitive.NewObjectID()
-	ctx, cancel := utils.DefaultCtx()
-	defer cancel()
-
-	if !item.Type.IsValid() {
-		return nil, errors_code.TYPE_ITEM_INVALID
-	}
-
-	_, err := config.ItemCollection.InsertOne(ctx, item)
-	if err != nil {
-		if mongo.IsDuplicateKeyError(err) {
-			return nil, errors_code.ITEM_EXISTS
-		}
-		return nil, err
-	}
-	return &item.ID, nil
-}
-
 func GetAllItems() ([]models.Item, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
@@ -52,13 +33,32 @@ func GetAllItems() ([]models.Item, error) {
 	return items, nil
 }
 
+func CreateItem(request models.Item) (*primitive.ObjectID, error) {
+	request.ID = primitive.NewObjectID()
+	ctx, cancel := utils.DefaultCtx()
+	defer cancel()
+
+	if !request.Type.IsValid() {
+		return nil, errors_code.TYPE_ITEM_INVALID
+	}
+
+	_, err := config.ItemCollection.InsertOne(ctx, request)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, errors_code.ITEM_EXISTS
+		}
+		return nil, err
+	}
+	return &request.ID, nil
+}
+
 func GetItemByID(id string) (*models.Item, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return nil, err
+		return nil, errors_code.ITEM_NO_EXISTS
 	}
 
 	var item models.Item
@@ -73,21 +73,21 @@ func GetItemByID(id string) (*models.Item, error) {
 	return &item, nil
 }
 
-func UpdateItem(item models.Item) error {
+func UpdateItem(request models.Item) error {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	if !item.Type.IsValid() {
+	if !request.Type.IsValid() {
 		return errors_code.TYPE_ITEM_INVALID
 	}
 
 	res, err := config.ItemCollection.UpdateOne(
 		ctx,
-		bson.M{"_id": item.ID},
+		bson.M{"_id": request.ID},
 		bson.M{"$set": bson.M{
-			"name":  item.Name,
-			"type":  item.Type,
-			"price": item.Price,
+			"name":  request.Name,
+			"type":  request.Type,
+			"price": request.Price,
 		}},
 	)
 

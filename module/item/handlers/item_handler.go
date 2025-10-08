@@ -10,13 +10,13 @@ import (
 )
 
 func CreateItem(c *gin.Context) {
-	var item models.Item
-	if err := c.ShouldBindJSON(&item); err != nil {
+	var request models.Item
+	if err := c.ShouldBindJSON(&request); err != nil {
 		utils.JSONError(c, err)
 		return
 	}
 
-	id, err := services.CreateItem(item)
+	id, err := services.CreateItem(request)
 	if err != nil {
 		utils.JSONError(c, err)
 		return
@@ -44,14 +44,14 @@ func GetItemByID(c *gin.Context) {
 }
 
 func UpdateItem(c *gin.Context) {
-	var item models.Item
-	if err := c.ShouldBindJSON(&item); err != nil {
+	var request models.Item
+	if err := c.ShouldBindJSON(&request); err != nil {
 		utils.JSONError(c, err)
 		return
 	}
 
-	item.ID, _ = primitive.ObjectIDFromHex(c.Param("id"))
-	if err := services.UpdateItem(item); err != nil {
+	request.ID, _ = primitive.ObjectIDFromHex(c.Param("id"))
+	if err := services.UpdateItem(request); err != nil {
 		utils.JSONError(c, err)
 		return
 	}
