@@ -4,7 +4,7 @@ import (
 	"errors"
 	"myapp/common/errors_code"
 	"myapp/common/utils"
-	"myapp/config"
+	"myapp/config/db"
 	"myapp/module/user/models"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,7 +22,7 @@ func GetUserByID(id string) (*models.User, error) {
 	}
 
 	var user models.User
-	err = config.UserCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
+	err = db.UserCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors_code.USER_NO_EXISTS

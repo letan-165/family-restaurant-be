@@ -4,7 +4,7 @@ import (
 	"errors"
 	"myapp/common/errors_code"
 	"myapp/common/utils"
-	"myapp/config"
+	"myapp/config/db"
 	models "myapp/module/item/models"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,7 +16,7 @@ func GetAllItems() ([]models.Item, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	cursor, err := config.ItemCollection.Find(ctx, bson.M{})
+	cursor, err := db.ItemCollection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func CreateItem(request models.Item) (*primitive.ObjectID, error) {
 		return nil, errors_code.TYPE_ITEM_INVALID
 	}
 
-	_, err := config.ItemCollection.InsertOne(ctx, request)
+	_, err := db.ItemCollection.InsertOne(ctx, request)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return nil, errors_code.ITEM_EXISTS
@@ -62,7 +62,7 @@ func GetItemByID(id string) (*models.Item, error) {
 	}
 
 	var item models.Item
-	err = config.ItemCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&item)
+	err = db.ItemCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&item)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors_code.ITEM_NO_EXISTS
@@ -81,7 +81,7 @@ func UpdateItem(request models.Item) error {
 		return errors_code.TYPE_ITEM_INVALID
 	}
 
-	res, err := config.ItemCollection.UpdateOne(
+	res, err := db.ItemCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": request.ID},
 		bson.M{"$set": bson.M{
@@ -107,7 +107,7 @@ func DeleteItem(id string) error {
 	defer cancel()
 
 	objID, _ := primitive.ObjectIDFromHex(id)
-	res, err := config.ItemCollection.DeleteOne(ctx, bson.M{"_id": objID})
+	res, err := db.ItemCollection.DeleteOne(ctx, bson.M{"_id": objID})
 
 	if err != nil {
 		return err
@@ -135,7 +135,7 @@ func GetItemsByIDs(ids []string) ([]models.Item, error) {
 
 	filter := bson.M{"_id": bson.M{"$in": objectIDs}}
 
-	cursor, err := config.ItemCollection.Find(ctx, filter)
+	cursor, err := db.ItemCollection.Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

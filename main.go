@@ -2,7 +2,7 @@ package main
 
 import (
 	"myapp/common/middlewares"
-	"myapp/config"
+	"myapp/config/db"
 	routes_item "myapp/module/item/routes"
 	routes_order "myapp/module/order/routers"
 
@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	config.ConnectMongo()
+	db.ConnectMongo()
 
 	r := gin.Default()
 	r.Use(middlewares.TrimJSONMiddleware())

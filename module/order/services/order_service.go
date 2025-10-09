@@ -4,7 +4,7 @@ import (
 	"errors"
 	"myapp/common/errors_code"
 	"myapp/common/utils"
-	"myapp/config"
+	"myapp/config/db"
 	models_item "myapp/module/item/models"
 	item_service "myapp/module/item/services"
 	"myapp/module/order/models"
@@ -62,7 +62,7 @@ func GetAllOrder() ([]models_order.Order, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	cursor, err := config.OrderCollection.Find(ctx, bson.M{})
+	cursor, err := db.OrderCollection.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	_, err = config.OrderCollection.InsertOne(ctx, order)
+	_, err = db.OrderCollection.InsertOne(ctx, order)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return nil, errors_code.ORDER_EXISTS
@@ -126,7 +126,7 @@ func GetOrderByID(id string) (*models_order.Order, error) {
 	}
 
 	var order models.Order
-	err = config.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors_code.ORDER_NO_EXISTS
@@ -154,7 +154,7 @@ func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
 		return errors_code.ORDER_NO_EXISTS
 	}
 	var order models.Order
-	err = config.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors_code.ORDER_NO_EXISTS
@@ -172,7 +172,7 @@ func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
 		return err
 	}
 
-	res, err := config.OrderCollection.UpdateOne(
+	res, err := db.OrderCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": objID},
 		bson.M{"$set": bson.M{
@@ -203,7 +203,7 @@ func UpdatePendingOrder(id string, status string) error {
 		return errors_code.ORDER_NO_EXISTS
 	}
 	var order models.Order
-	err = config.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors_code.ORDER_NO_EXISTS
@@ -224,7 +224,7 @@ func UpdatePendingOrder(id string, status string) error {
 		return errors_code.ORDER_NO_CONFIRM
 	}
 
-	res, err := config.OrderCollection.UpdateOne(
+	res, err := db.OrderCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": objID},
 		bson.M{"$set": bson.M{
@@ -253,7 +253,7 @@ func UpdateConfirmOrder(id string) error {
 		return errors_code.ORDER_NO_EXISTS
 	}
 	var order models.Order
-	err = config.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors_code.ORDER_NO_EXISTS
@@ -264,7 +264,7 @@ func UpdateConfirmOrder(id string) error {
 		return errors_code.ORDER_NO_CONFIRM
 	}
 
-	res, err := config.OrderCollection.UpdateOne(
+	res, err := db.OrderCollection.UpdateOne(
 		ctx,
 		bson.M{"_id": objID},
 		bson.M{"$set": bson.M{
