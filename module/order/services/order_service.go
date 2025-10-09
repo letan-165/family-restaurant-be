@@ -58,13 +58,26 @@ func buildOrderItems(reqItems []dto.ItemOrderSaveRequest) ([]models_order.ItemOr
 	return items, totalOrder, nil
 }
 
-func GetAllOrder() ([]models_order.Order, error) {
+func GetAllOrders(page, limit int, sortField string, sortOrder int, status string) ([]models.Order, int64, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	cursor, err := db.OrderCollection.Find(ctx, bson.M{})
+	filter := bson.M{}
+	if status != "" {
+		filter["status"] = status
+	}
+
+	findOptions := utils.BuildMongoFindOptions(utils.PaginationOptions{
+		Page:      page,
+		Limit:     limit,
+		SortField: sortField,
+		SortOrder: sortOrder,
+		Filter:    filter,
+	})
+
+	cursor, err := db.OrderCollection.Find(ctx, filter, findOptions)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
@@ -72,12 +85,57 @@ func GetAllOrder() ([]models_order.Order, error) {
 	for cursor.Next(ctx) {
 		var order models.Order
 		if err := cursor.Decode(&order); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		orders = append(orders, order)
 	}
 
-	return orders, nil
+	total, err := db.OrderCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return orders, total, nil
+}
+
+func GetAllOrdersByCustomer(userID string, page, limit int, sortField string, sortOrder int, status string) ([]models.Order, int64, error) {
+	ctx, cancel := utils.DefaultCtx()
+	defer cancel()
+
+	filter := bson.M{"customer.userID": userID}
+	if status != "" {
+		filter["status"] = status
+	}
+
+	findOptions := utils.BuildMongoFindOptions(utils.PaginationOptions{
+		Page:      page,
+		Limit:     limit,
+		SortField: sortField,
+		SortOrder: sortOrder,
+		Filter:    filter,
+	})
+
+	cursor, err := db.OrderCollection.Find(ctx, filter, findOptions)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+
+	var orders []models.Order
+	for cursor.Next(ctx) {
+		var order models.Order
+		if err := cursor.Decode(&order); err != nil {
+			return nil, 0, err
+		}
+		orders = append(orders, order)
+	}
+
+	total, err := db.OrderCollection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return orders, total, nil
 }
 
 func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {

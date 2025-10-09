@@ -26,12 +26,18 @@ func CreateItem(c *gin.Context) {
 }
 
 func GetAllItems(c *gin.Context) {
-	items, err := services.GetAllItems()
+	page, limit, sortField, sortOrder, _ := utils.ParsePaginationQuery(c)
+	items, total, err := services.GetAllItems(page, limit, sortField, sortOrder)
 	if err != nil {
 		utils.JSONError(c, err)
 		return
 	}
-	utils.JSONData(c, items)
+	utils.JSONData(c, gin.H{
+		"data":        items,
+		"totalCount":  total,
+		"totalPages":  utils.TotalPages(total, limit),
+		"currentPage": page,
+	})
 }
 
 func GetItemByID(c *gin.Context) {

@@ -9,12 +9,37 @@ import (
 )
 
 func GetAllOrders(c *gin.Context) {
-	orders, err := services.GetAllOrder()
+	page, limit, sortField, sortOrder, status := utils.ParsePaginationQuery(c)
+
+	orders, total, err := services.GetAllOrders(page, limit, sortField, sortOrder, status)
 	if err != nil {
 		utils.JSONError(c, err)
 		return
 	}
-	utils.JSONData(c, orders)
+
+	utils.JSONData(c, gin.H{
+		"data":        orders,
+		"totalCount":  total,
+		"totalPages":  utils.TotalPages(total, limit),
+		"currentPage": page,
+	})
+}
+
+func GetAllOrdersByCustomer(c *gin.Context) {
+	page, limit, sortField, sortOrder, status := utils.ParsePaginationQuery(c)
+
+	orders, total, err := services.GetAllOrdersByCustomer(c.Param("userID"), page, limit, sortField, sortOrder, status)
+	if err != nil {
+		utils.JSONError(c, err)
+		return
+	}
+
+	utils.JSONData(c, gin.H{
+		"data":        orders,
+		"totalCount":  total,
+		"totalPages":  utils.TotalPages(total, limit),
+		"currentPage": page,
+	})
 }
 
 func CreateOrder(c *gin.Context) {

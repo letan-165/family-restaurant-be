@@ -12,13 +12,21 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func GetAllItems() ([]models.Item, error) {
+func GetAllItems(page, limit int, sortField string, sortOrder int) ([]models.Item, int64, error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	cursor, err := db.ItemCollection.Find(ctx, bson.M{})
+	findOptions := utils.BuildMongoFindOptions(utils.PaginationOptions{
+		Page:      page,
+		Limit:     limit,
+		SortField: sortField,
+		SortOrder: sortOrder,
+		Filter:    bson.M{},
+	})
+
+	cursor, err := db.ItemCollection.Find(ctx, bson.M{}, findOptions)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
@@ -26,11 +34,16 @@ func GetAllItems() ([]models.Item, error) {
 	for cursor.Next(ctx) {
 		var item models.Item
 		if err := cursor.Decode(&item); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		items = append(items, item)
 	}
-	return items, nil
+
+	total, err := db.OrderCollection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 func CreateItem(request models.Item) (*primitive.ObjectID, error) {
