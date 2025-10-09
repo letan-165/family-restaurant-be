@@ -17,30 +17,40 @@ const (
 )
 
 type CustomerOrder struct {
-	UserID   string `bson:"userID"`
-	Receiver string `bson:"receiver"`
-	Phone    string `bson:"phone"`
-	Address  string `bson:"address"`
+	UserID   string `bson:"userID" json:"userID"`
+	Receiver string `bson:"receiver" json:"receiver"`
+	Phone    string `bson:"phone" json:"phone"`
+	Address  string `bson:"address" json:"address"`
 }
 
 type ItemOrder struct {
-	Item     models.Item `bson:"item"`
-	Quantity int         `bson:"quantity"`
-	Total    int         `bson:"total"`
+	Item     models.Item `bson:"item" json:"item"`
+	Quantity int         `bson:"quantity" json:"quantity"`
+	Total    int         `bson:"total" json:"total"`
 }
 
 type Order struct {
-	ID            primitive.ObjectID `bson:"_id"`
-	Customer      CustomerOrder      `bson:"customer"`
-	TimeBooking   time.Time          `bson:"timeBooking"`
-	Status        OrderStatus        `bson:"status"`
-	TimeCompleted *time.Time         `bson:"timeCompleted"`
-	Total         int                `bson:"total"`
-	Items         []ItemOrder        `bson:"items"`
+	ID          primitive.ObjectID `bson:"_id" json:"id"`
+	Customer    CustomerOrder      `bson:"customer" json:"customer"`
+	TimeBooking time.Time          `bson:"timeBooking" json:"timeBooking"`
+	Status      OrderStatus        `bson:"status" json:"status"`
+	TimeFinish  *time.Time         `bson:"timeFinish" json:"timeFinish"`
+	Total       int                `bson:"total" json:"total"`
+	Items       []ItemOrder        `bson:"items" json:"items"`
 }
 
 func (o OrderStatus) IsValid() bool {
 	switch o {
+	case PENDING, CANCELLED, CONFIRMED, COMPLETED:
+		return true
+	default:
+		return false
+	}
+}
+
+func IsValid(status string) bool {
+	ordeStatus := OrderStatus(status)
+	switch ordeStatus {
 	case PENDING, CANCELLED, CONFIRMED, COMPLETED:
 		return true
 	default:

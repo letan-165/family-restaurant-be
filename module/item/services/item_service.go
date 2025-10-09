@@ -119,3 +119,36 @@ func DeleteItem(id string) error {
 
 	return nil
 }
+
+func GetItemsByIDs(ids []string) ([]models.Item, error) {
+	ctx, cancel := utils.DefaultCtx()
+	defer cancel()
+
+	objectIDs := make([]primitive.ObjectID, 0, len(ids))
+	for _, id := range ids {
+		objID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return nil, errors_code.ITEM_NO_EXISTS
+		}
+		objectIDs = append(objectIDs, objID)
+	}
+
+	filter := bson.M{"_id": bson.M{"$in": objectIDs}}
+
+	cursor, err := config.ItemCollection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var items []models.Item
+	if err := cursor.All(ctx, &items); err != nil {
+		return nil, err
+	}
+
+	if len(items) == 0 {
+		return nil, errors_code.ITEM_NO_EXISTS
+	}
+
+	return items, nil
+}

@@ -20,6 +20,8 @@ var (
 	ORDER_EXISTS         = &AppError{1003, "Order exists", http.StatusBadRequest}
 	ORDER_NO_EXISTS      = &AppError{1004, "Order no exists", http.StatusBadRequest}
 	STATUS_ORDER_INVALID = &AppError{1005, "Status Order invalid (PENDING, CANCELLED, CONFIRMED, COMPLETED)", http.StatusBadRequest}
+	ORDER_NO_PENDING     = &AppError{1006, "Order no pending", http.StatusBadRequest}
+	ORDER_NO_CONFIRM     = &AppError{1007, "Order no confirm", http.StatusBadRequest}
 
 	USER_EXISTS       = &AppError{1006, "User exists", http.StatusBadRequest}
 	USER_NO_EXISTS    = &AppError{1007, "User no exists", http.StatusBadRequest}

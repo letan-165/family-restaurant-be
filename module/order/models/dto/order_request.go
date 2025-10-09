@@ -2,12 +2,12 @@ package dto
 
 import "myapp/module/order/models"
 
-type ItemOrderCreateRequest struct {
+type ItemOrderSaveRequest struct {
 	ID       string `json:"id"`
 	Quantity int    `json:"quantity"`
 }
 
-type OrderCreateRequest struct {
-	Customer models.CustomerOrder     `json:"customer"`
-	Items    []ItemOrderCreateRequest `json:"items"`
+type OrderSaveRequest struct {
+	Customer models.CustomerOrder   `json:"customer"`
+	Items    []ItemOrderSaveRequest `json:"items"`
 }
