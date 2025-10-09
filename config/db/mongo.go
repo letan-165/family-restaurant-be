@@ -47,16 +47,24 @@ func ConnectMongo() {
 
 func InitCollections() {
 	ItemCollection = DB.Collection("items")
-	indexModel := mongo.IndexModel{
+	OrderCollection = DB.Collection("orders")
+	UserCollection = DB.Collection("users")
+
+	itemIndex := mongo.IndexModel{
 		Keys:    bson.M{"name": 1},
 		Options: options.Index().SetUnique(true),
 	}
-
-	_, err := ItemCollection.Indexes().CreateOne(context.TODO(), indexModel)
-	if err != nil {
-		log.Fatalf("Failed to create index: %v", err)
+	if _, err := ItemCollection.Indexes().CreateOne(context.TODO(), itemIndex); err != nil {
+		log.Fatalf("Không thể tạo index cho items.name: %v", err)
 	}
 
-	OrderCollection = DB.Collection("orders")
-	UserCollection = DB.Collection("users")
+	userIndex := mongo.IndexModel{
+		Keys:    bson.M{"email": 1},
+		Options: options.Index().SetUnique(true),
+	}
+	if _, err := UserCollection.Indexes().CreateOne(context.TODO(), userIndex); err != nil {
+		log.Fatalf("Không thể tạo index cho users.email: %v", err)
+	}
+
+	log.Println("Đã khởi tạo collections và indexes thành công!")
 }

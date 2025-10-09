@@ -32,3 +32,21 @@ func GetUserByID(id string) (*models.User, error) {
 
 	return &user, nil
 }
+
+func CreateUser(request models.User) error {
+	ctx, cancel := utils.DefaultCtx()
+	defer cancel()
+
+	if !request.Role.IsValid() {
+		return errors_code.ROLE_USER_INVALID
+	}
+
+	_, err := db.UserCollection.InsertOne(ctx, request)
+	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return errors_code.USER_EXISTS
+		}
+		return err
+	}
+	return nil
+}
