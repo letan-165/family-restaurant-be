@@ -5,6 +5,7 @@ import (
 	"myapp/config/db"
 	"myapp/config/oauth"
 	routes_item "myapp/module/item/routes"
+	routes_notification "myapp/module/notification/routers"
 	routes_order "myapp/module/order/routers"
 	routes_user "myapp/module/user/routers"
 
@@ -28,5 +29,7 @@ func main() {
 	routes_item.ItemRoutes(r)
 	routes_order.OrderRoutes(r)
 	routes_user.AuthRoutes(r)
+	routes_notification.NotificationRoutes(r)
+
 	r.Run(":8080")
 }
