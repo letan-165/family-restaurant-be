@@ -7,10 +7,12 @@ import (
 	"myapp/config/db"
 	models_item "myapp/module/item/models"
 	item_service "myapp/module/item/services"
+	notification_service "myapp/module/notification/services"
 	"myapp/module/order/models"
 	models_order "myapp/module/order/models"
 	"myapp/module/order/models/dto"
 	user_service "myapp/module/user/services"
+
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -171,6 +173,13 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 		}
 		return nil, err
 	}
+
+	//send email
+	err = notification_service.SendMailBooking(order)
+	if err != nil {
+		return nil, err
+	}
+
 	return &order.ID, nil
 }
 
