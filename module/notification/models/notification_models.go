@@ -1,9 +1,9 @@
-package ws
+package models
 
 import (
 	"sync"
 
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 )
 
 type Notification struct {
@@ -25,7 +25,7 @@ func (n *Notification) Broadcast(msg interface{}) {
 	n.Mu.Lock()
 	defer n.Mu.Unlock()
 	for conn := range n.Clients {
-		if err := websocket.JSON.Send(conn, msg); err != nil {
+		if err := conn.WriteJSON(msg); err != nil {
 			conn.Close()
 			delete(n.Clients, conn)
 		}

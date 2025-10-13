@@ -2,11 +2,13 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"myapp/common/errors_code"
 	"myapp/common/utils"
 	"myapp/config/db"
 	models_item "myapp/module/item/models"
 	item_service "myapp/module/item/services"
+	models_notification "myapp/module/notification/models"
 	notification_service "myapp/module/notification/services"
 	"myapp/module/order/models"
 	models_order "myapp/module/order/models"
@@ -174,11 +176,23 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 		return nil, err
 	}
 
-	//send email
-	err = notification_service.SendMailBooking(order)
-	if err != nil {
-		return nil, err
-	}
+	//Gửi mail
+	go func(o models_order.Order) {
+		if err := notification_service.SendMailBooking(o); err != nil {
+			fmt.Println("SendMailBooking error:", err)
+		}
+	}(order)
+
+	//Gửi AlertOrder
+	go func(o models_order.Order) {
+		alert := models_notification.AlertOrder{
+			ID:          primitive.NewObjectID(),
+			OrderID:     o.ID.Hex(),
+			TimeBooking: o.TimeBooking,
+			Message:     fmt.Sprintf("Có đơn hàng mới (Tổng: %d), vui lòng kiểm tra, xác nhận", o.Total),
+		}
+		models_notification.Notifier.Broadcast(alert)
+	}(order)
 
 	return &order.ID, nil
 }
