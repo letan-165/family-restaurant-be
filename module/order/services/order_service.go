@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"myapp/common/errors_code"
 	"myapp/common/utils"
-	"myapp/config/db"
 	models_item "myapp/module/item/models"
 	item_service "myapp/module/item/services"
 	models_notification "myapp/module/notification/models"
 	notification_service "myapp/module/notification/services"
-	"myapp/module/order/models"
 	models_order "myapp/module/order/models"
 	"myapp/module/order/models/dto"
+	"myapp/module/order/repository"
 	user_service "myapp/module/user/services"
 
 	"time"
@@ -21,6 +20,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
+var orderRepo *repository.OrderRepository
+
+func initRepo() {
+	if orderRepo == nil {
+		orderRepo = repository.NewOrderRepository()
+	}
+}
 
 // hàm riêng
 func buildOrderItems(reqItems []dto.ItemOrderSaveRequest) ([]models_order.ItemOrder, int, error) {
@@ -62,7 +69,8 @@ func buildOrderItems(reqItems []dto.ItemOrderSaveRequest) ([]models_order.ItemOr
 	return items, totalOrder, nil
 }
 
-func GetAllOrders(page, limit int, sortField string, sortOrder int, status string) ([]models.Order, int64, error) {
+func GetAllOrders(page, limit int, sortField string, sortOrder int, status string) ([]models_order.Order, int64, error) {
+	initRepo()
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
@@ -79,22 +87,12 @@ func GetAllOrders(page, limit int, sortField string, sortOrder int, status strin
 		Filter:    filter,
 	})
 
-	cursor, err := db.OrderCollection.Find(ctx, filter, findOptions)
+	orders, err := orderRepo.BaseRepo.FindAll(ctx, filter, findOptions)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer cursor.Close(ctx)
 
-	var orders []models.Order
-	for cursor.Next(ctx) {
-		var order models.Order
-		if err := cursor.Decode(&order); err != nil {
-			return nil, 0, err
-		}
-		orders = append(orders, order)
-	}
-
-	total, err := db.OrderCollection.CountDocuments(ctx, filter)
+	total, err := orderRepo.BaseRepo.Count(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -102,7 +100,8 @@ func GetAllOrders(page, limit int, sortField string, sortOrder int, status strin
 	return orders, total, nil
 }
 
-func GetAllOrdersByCustomer(userID string, page, limit int, sortField string, sortOrder int, status string) ([]models.Order, int64, error) {
+func GetAllOrdersByCustomer(userID string, page, limit int, sortField string, sortOrder int, status string) ([]models_order.Order, int64, error) {
+	initRepo()
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
@@ -119,22 +118,12 @@ func GetAllOrdersByCustomer(userID string, page, limit int, sortField string, so
 		Filter:    filter,
 	})
 
-	cursor, err := db.OrderCollection.Find(ctx, filter, findOptions)
+	orders, err := orderRepo.BaseRepo.FindAll(ctx, filter, findOptions)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer cursor.Close(ctx)
 
-	var orders []models.Order
-	for cursor.Next(ctx) {
-		var order models.Order
-		if err := cursor.Decode(&order); err != nil {
-			return nil, 0, err
-		}
-		orders = append(orders, order)
-	}
-
-	total, err := db.OrderCollection.CountDocuments(ctx, filter)
+	total, err := orderRepo.BaseRepo.Count(ctx, filter)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -143,6 +132,10 @@ func GetAllOrdersByCustomer(userID string, page, limit int, sortField string, so
 }
 
 func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
+	initRepo()
+	ctx, cancel := utils.DefaultCtx()
+	defer cancel()
+
 	var order models_order.Order
 	order.ID = primitive.NewObjectID()
 
@@ -165,10 +158,7 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 	order.TimeBooking = time.Now()
 	order.Total = total
 
-	ctx, cancel := utils.DefaultCtx()
-	defer cancel()
-
-	_, err = db.OrderCollection.InsertOne(ctx, order)
+	res, err := orderRepo.BaseRepo.Insert(ctx, order)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return nil, errors_code.ORDER_EXISTS
@@ -176,7 +166,7 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 		return nil, err
 	}
 
-	//Gửi mail
+	//Gửi mail (vẫn giữ goroutine như trước)
 	go func(o models_order.Order) {
 		if err := notification_service.SendMailBooking(o); err != nil {
 			fmt.Println("SendMailBooking error:", err)
@@ -194,10 +184,11 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 		models_notification.Notifier.Broadcast(alert)
 	}(order)
 
-	return &order.ID, nil
+	return res, nil
 }
 
 func GetOrderByID(id string) (*models_order.Order, error) {
+	initRepo()
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
@@ -206,8 +197,7 @@ func GetOrderByID(id string) (*models_order.Order, error) {
 		return nil, errors_code.ORDER_NO_EXISTS
 	}
 
-	var order models.Order
-	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+	order, err := orderRepo.BaseRepo.FindByID(ctx, objID)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, errors_code.ORDER_NO_EXISTS
@@ -215,10 +205,14 @@ func GetOrderByID(id string) (*models_order.Order, error) {
 		return nil, err
 	}
 
-	return &order, nil
+	return order, nil
 }
 
 func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
+	initRepo()
+	ctx, cancel := utils.DefaultCtx()
+	defer cancel()
+
 	//check userID (Nếu có)
 	if request.Customer.UserID != "" {
 		if _, err := user_service.GetUserByID(request.Customer.UserID); err != nil {
@@ -226,16 +220,13 @@ func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
 		}
 	}
 
-	ctx, cancel := utils.DefaultCtx()
-	defer cancel()
-
 	//check order
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return errors_code.ORDER_NO_EXISTS
 	}
-	var order models.Order
-	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+
+	order, err := orderRepo.BaseRepo.FindByID(ctx, objID)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors_code.ORDER_NO_EXISTS
@@ -243,7 +234,7 @@ func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
 		return err
 	}
 
-	if order.Status != models.PENDING {
+	if order.Status != models_order.PENDING {
 		return errors_code.ORDER_NO_PENDING
 	}
 
@@ -253,16 +244,11 @@ func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
 		return err
 	}
 
-	res, err := db.OrderCollection.UpdateOne(
-		ctx,
-		bson.M{"_id": objID},
-		bson.M{"$set": bson.M{
-			"customer": request.Customer,
-			"items":    items,
-			"total":    total,
-		}},
-	)
-
+	res, err := orderRepo.BaseRepo.Update(ctx, objID, bson.M{
+		"customer": request.Customer,
+		"items":    items,
+		"total":    total,
+	})
 	if err != nil {
 		return err
 	}
@@ -275,6 +261,7 @@ func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
 }
 
 func UpdatePendingOrder(id string, status string) error {
+	initRepo()
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
@@ -283,8 +270,8 @@ func UpdatePendingOrder(id string, status string) error {
 	if err != nil {
 		return errors_code.ORDER_NO_EXISTS
 	}
-	var order models.Order
-	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+
+	order, err := orderRepo.BaseRepo.FindByID(ctx, objID)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors_code.ORDER_NO_EXISTS
@@ -292,27 +279,20 @@ func UpdatePendingOrder(id string, status string) error {
 		return err
 	}
 
-	orderStatus := models.OrderStatus(status)
+	orderStatus := models_order.OrderStatus(status)
 	if !orderStatus.IsValid() {
 		return errors_code.STATUS_ORDER_INVALID
 	}
 
-	if order.Status != models.PENDING {
+	if order.Status != models_order.PENDING {
 		return errors_code.ORDER_NO_PENDING
 	}
 
-	if models.OrderStatus(status) == models.COMPLETED {
+	if models_order.OrderStatus(status) == models_order.COMPLETED {
 		return errors_code.ORDER_NO_CONFIRM
 	}
 
-	res, err := db.OrderCollection.UpdateOne(
-		ctx,
-		bson.M{"_id": objID},
-		bson.M{"$set": bson.M{
-			"status": status,
-		}},
-	)
-
+	res, err := orderRepo.BaseRepo.Update(ctx, objID, bson.M{"status": status})
 	if err != nil {
 		return err
 	}
@@ -325,6 +305,7 @@ func UpdatePendingOrder(id string, status string) error {
 }
 
 func UpdateConfirmOrder(id string) error {
+	initRepo()
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
@@ -333,27 +314,23 @@ func UpdateConfirmOrder(id string) error {
 	if err != nil {
 		return errors_code.ORDER_NO_EXISTS
 	}
-	var order models.Order
-	err = db.OrderCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&order)
+
+	order, err := orderRepo.BaseRepo.FindByID(ctx, objID)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return errors_code.ORDER_NO_EXISTS
 		}
 		return err
 	}
-	if order.Status != models.CONFIRMED {
+
+	if order.Status != models_order.CONFIRMED {
 		return errors_code.ORDER_NO_CONFIRM
 	}
 
-	res, err := db.OrderCollection.UpdateOne(
-		ctx,
-		bson.M{"_id": objID},
-		bson.M{"$set": bson.M{
-			"status":     models.COMPLETED,
-			"timeFinish": time.Now(),
-		}},
-	)
-
+	res, err := orderRepo.BaseRepo.Update(ctx, objID, bson.M{
+		"status":     models_order.COMPLETED,
+		"timeFinish": time.Now(),
+	})
 	if err != nil {
 		return err
 	}

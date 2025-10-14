@@ -12,6 +12,7 @@ func JSONError(c *gin.Context, err error) {
 	c.JSON(appErr.Status, gin.H{
 		"code":    appErr.Code,
 		"message": appErr.Message,
+		"error":   err.Error(),
 	})
 }
 
