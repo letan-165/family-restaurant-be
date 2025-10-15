@@ -136,20 +136,3 @@ func DeleteItem(id string) error {
 
 	return nil
 }
-
-func GetItemsByIDs(ids []string) ([]models.Item, error) {
-	initRepo()
-	ctx, cancel := utils.DefaultCtx()
-	defer cancel()
-
-	items, err := itemRepo.FindItemsByIDs(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(items) == 0 {
-		return nil, errors_code.ITEM_NO_EXISTS
-	}
-
-	return items, nil
-}

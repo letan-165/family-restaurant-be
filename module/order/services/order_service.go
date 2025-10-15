@@ -1,17 +1,19 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"myapp/common/errors_code"
 	"myapp/common/utils"
 	models_item "myapp/module/item/models"
-	item_service "myapp/module/item/services"
+	item_repo "myapp/module/item/repository"
 	models_notification "myapp/module/notification/models"
+	alert_repo "myapp/module/notification/repository"
 	notification_service "myapp/module/notification/services"
 	models_order "myapp/module/order/models"
 	"myapp/module/order/models/dto"
-	"myapp/module/order/repository"
+	order_repo "myapp/module/order/repository"
 	user_service "myapp/module/user/services"
 
 	"time"
@@ -21,52 +23,20 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var orderRepo *repository.OrderRepository
+var orderRepo *order_repo.OrderRepository
+var itemRepo *item_repo.ItemRepository
+var alertRepo *alert_repo.AlertRepository
 
 func initRepo() {
 	if orderRepo == nil {
-		orderRepo = repository.NewOrderRepository()
+		orderRepo = order_repo.NewOrderRepository()
 	}
-}
-
-// hàm riêng
-func buildOrderItems(reqItems []dto.ItemOrderSaveRequest) ([]models_order.ItemOrder, int, error) {
-	itemIDs := make([]string, len(reqItems))
-	for i, it := range reqItems {
-		itemIDs[i] = it.ID
+	if itemRepo == nil {
+		itemRepo = item_repo.NewItemRepository()
 	}
-
-	itemsDB, err := item_service.GetItemsByIDs(itemIDs)
-	if err != nil {
-		return nil, 0, err
+	if alertRepo == nil {
+		alertRepo = alert_repo.NewAlertRepository()
 	}
-
-	itemMap := make(map[string]models_item.Item)
-	for _, item := range itemsDB {
-		itemMap[item.ID.Hex()] = item
-	}
-
-	var (
-		items      []models_order.ItemOrder
-		totalOrder int
-	)
-
-	for _, reqItem := range reqItems {
-		item, ok := itemMap[reqItem.ID]
-		if !ok {
-			return nil, 0, errors_code.ITEM_NO_EXISTS
-		}
-
-		total := reqItem.Quantity * item.Price
-		items = append(items, models_order.ItemOrder{
-			Item:     item,
-			Quantity: reqItem.Quantity,
-			Total:    total,
-		})
-		totalOrder += total
-	}
-
-	return items, totalOrder, nil
 }
 
 func GetAllOrders(page, limit int, sortField string, sortOrder int, status string) ([]models_order.Order, int64, error) {
@@ -149,7 +119,7 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 	order.Customer = request.Customer
 
 	//set order
-	items, total, err := buildOrderItems(request.Items)
+	items, total, err := buildOrderItems(ctx, request.Items)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +136,7 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 		return nil, err
 	}
 
-	//Gửi mail (vẫn giữ goroutine như trước)
+	//Gửi mail
 	go func(o models_order.Order) {
 		if err := notification_service.SendMailBooking(o); err != nil {
 			fmt.Println("SendMailBooking error:", err)
@@ -174,15 +144,18 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 	}(order)
 
 	//Gửi AlertOrder
-	go func(o models_order.Order) {
-		alert := models_notification.AlertOrder{
-			ID:          primitive.NewObjectID(),
-			OrderID:     o.ID.Hex(),
-			TimeBooking: o.TimeBooking,
-			Message:     fmt.Sprintf("Có đơn hàng mới (Tổng: %d), vui lòng kiểm tra, xác nhận", o.Total),
-		}
-		models_notification.Notifier.Broadcast(alert)
-	}(order)
+	alert := models_notification.AlertOrder{
+		ID:          primitive.NewObjectID(),
+		OrderID:     order.ID.Hex(),
+		TimeBooking: order.TimeBooking,
+		Message:     fmt.Sprintf("Có đơn hàng mới (Tổng: %d), vui lòng kiểm tra, xác nhận", order.Total),
+	}
+	_, err = alertRepo.BaseRepo.Insert(ctx, alert)
+	if err != nil {
+		return nil, err
+	}
+
+	models_notification.Notifier.Broadcast(alert)
 
 	return res, nil
 }
@@ -239,7 +212,7 @@ func UpdateInfoOrder(id string, request dto.OrderSaveRequest) error {
 	}
 
 	//set order
-	items, total, err := buildOrderItems(request.Items)
+	items, total, err := buildOrderItems(ctx, request.Items)
 	if err != nil {
 		return err
 	}
@@ -340,4 +313,48 @@ func UpdateConfirmOrder(id string) error {
 	}
 
 	return nil
+}
+
+// hàm riêng
+func buildOrderItems(ctx context.Context, reqItems []dto.ItemOrderSaveRequest) ([]models_order.ItemOrder, int, error) {
+	itemIDs := make([]string, len(reqItems))
+	for i, it := range reqItems {
+		itemIDs[i] = it.ID
+	}
+
+	itemsDB, err := itemRepo.FindItemsByIDs(ctx, itemIDs)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if len(itemsDB) == 0 {
+		return nil, 0, errors_code.ITEM_NO_EXISTS
+	}
+
+	itemMap := make(map[string]models_item.Item)
+	for _, item := range itemsDB {
+		itemMap[item.ID.Hex()] = item
+	}
+
+	var (
+		items      []models_order.ItemOrder
+		totalOrder int
+	)
+
+	for _, reqItem := range reqItems {
+		item, ok := itemMap[reqItem.ID]
+		if !ok {
+			return nil, 0, errors_code.ITEM_NO_EXISTS
+		}
+
+		total := reqItem.Quantity * item.Price
+		items = append(items, models_order.ItemOrder{
+			Item:     item,
+			Quantity: reqItem.Quantity,
+			Total:    total,
+		})
+		totalOrder += total
+	}
+
+	return items, totalOrder, nil
 }
