@@ -125,7 +125,7 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 	}
 	order.Items = items
 	order.Status = models_order.PENDING
-	order.TimeBooking = time.Now()
+	order.TimeBooking = time.Now().UTC()
 	order.Total = total
 
 	res, err := orderRepo.BaseRepo.Insert(ctx, order)
@@ -154,8 +154,7 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	models_notification.Notifier.Broadcast(alert)
+	//service Alert
 
 	return res, nil
 }

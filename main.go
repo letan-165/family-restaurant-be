@@ -5,7 +5,6 @@ import (
 	"myapp/config/db"
 	"myapp/config/oauth"
 	routes_item "myapp/module/item/routes"
-	routes_notification "myapp/module/notification/routers"
 	routes_order "myapp/module/order/routers"
 	routes_user "myapp/module/user/routers"
 
@@ -30,13 +29,10 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	//Router websocket
-	routes_notification.NotificationRoutes(r)
-
 	//Middlewares
 	r.Use(middlewares.TrimJSONMiddleware())
 	authGroup := r.Group("")
-	authGroup.Use(middlewares.AuthMiddleware())
+	//authGroup.Use(middlewares.AuthMiddleware())
 	//Middlewares-Auth
 	authGroup.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
