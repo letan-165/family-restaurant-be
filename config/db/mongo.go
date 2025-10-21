@@ -16,7 +16,6 @@ var DB *mongo.Database
 var ItemCollection *mongo.Collection
 var OrderCollection *mongo.Collection
 var UserCollection *mongo.Collection
-var AlertCollection *mongo.Collection
 
 func ConnectMongo() {
 	err := godotenv.Load()
@@ -50,7 +49,6 @@ func InitCollections() {
 	ItemCollection = DB.Collection("items")
 	OrderCollection = DB.Collection("orders")
 	UserCollection = DB.Collection("users")
-	AlertCollection = DB.Collection("alerts")
 
 	itemIndex := mongo.IndexModel{
 		Keys:    bson.M{"name": 1},

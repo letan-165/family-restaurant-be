@@ -1,32 +1,28 @@
 package handler
 
 import (
+	"myapp/common/utils"
 	"myapp/module/notification/services"
-	"net/http"
+	"myapp/module/order/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 type SendRequest struct {
-	Target  string `json:"target" binding:"required"`
-	Title   string `json:"title" binding:"required"`
-	Body    string `json:"body" binding:"required"`
-	IsTopic bool   `json:"is_topic"`
+	Title string `json:"title" binding:"required"`
+	Body  string `json:"body" binding:"required"`
 }
 
-// Gửi thông báo FCM
 func SendNotification(c *gin.Context) {
-	var req SendRequest
+	var req models.Order
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu gửi không hợp lệ"})
+		utils.JSONError(c, err)
 		return
 	}
 
-	// Gọi trực tiếp service mà không cần handler struct
-	if err := services.SendMessage(req.Target, req.Title, req.Body, req.IsTopic); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := services.SendFCMBooking(req); err != nil {
+		utils.JSONError(c, err)
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Gửi FCM thành công ✅"})
+	utils.JSONData(c, gin.H{"message": "Gửi FCM thành công"})
 }

@@ -8,8 +8,6 @@ import (
 	"myapp/common/utils"
 	models_item "myapp/module/item/models"
 	item_repo "myapp/module/item/repository"
-	models_notification "myapp/module/notification/models"
-	alert_repo "myapp/module/notification/repository"
 	notification_service "myapp/module/notification/services"
 	models_order "myapp/module/order/models"
 	"myapp/module/order/models/dto"
@@ -25,7 +23,6 @@ import (
 
 var orderRepo *order_repo.OrderRepository
 var itemRepo *item_repo.ItemRepository
-var alertRepo *alert_repo.AlertRepository
 
 func initRepo() {
 	if orderRepo == nil {
@@ -33,9 +30,6 @@ func initRepo() {
 	}
 	if itemRepo == nil {
 		itemRepo = item_repo.NewItemRepository()
-	}
-	if alertRepo == nil {
-		alertRepo = alert_repo.NewAlertRepository()
 	}
 }
 
@@ -144,17 +138,11 @@ func CreateOrder(request dto.OrderSaveRequest) (*primitive.ObjectID, error) {
 	}(order)
 
 	//Gửi AlertOrder
-	alert := models_notification.AlertOrder{
-		ID:          primitive.NewObjectID(),
-		OrderID:     order.ID.Hex(),
-		TimeBooking: order.TimeBooking,
-		Message:     fmt.Sprintf("Có đơn hàng mới (Tổng: %d), vui lòng kiểm tra, xác nhận", order.Total),
-	}
-	_, err = alertRepo.BaseRepo.Insert(ctx, alert)
-	if err != nil {
-		return nil, err
-	}
-	//service Alert
+	go func(o models_order.Order) {
+		if err := notification_service.SendFCMBooking(o); err != nil {
+			fmt.Println("SendFCMBooking error:", err)
+		}
+	}(order)
 
 	return res, nil
 }

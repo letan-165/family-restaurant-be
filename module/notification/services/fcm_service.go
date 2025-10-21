@@ -5,24 +5,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"myapp/module/order/models"
 	"net/http"
 	"os"
+	"strconv"
 
 	"golang.org/x/oauth2/google"
 )
 
 type fcmMessage struct {
 	Message struct {
-		Token string `json:"token,omitempty"`
-		Topic string `json:"topic,omitempty"`
-		Data  struct {
-			Title string `json:"title"`
-			Body  string `json:"body"`
-		} `json:"data"`
+		Token string            `json:"token,omitempty"`
+		Topic string            `json:"topic,omitempty"`
+		Data  map[string]string `json:"data"`
 	} `json:"message"`
 }
 
-func SendMessage(target, title, body string, isTopic bool) error {
+func SendFCMBooking(order models.Order) error {
 	projectID := os.Getenv("FIREBASE_PROJECT_ID")
 	credPath := os.Getenv("FIREBASE_CREDENTIALS")
 
@@ -46,13 +45,12 @@ func SendMessage(target, title, body string, isTopic bool) error {
 	}
 
 	var msg fcmMessage
-	msg.Message.Data.Title = title
-	msg.Message.Data.Body = body
-
-	if isTopic {
-		msg.Message.Topic = target
-	} else {
-		msg.Message.Token = target
+	msg.Message.Topic = "all"
+	msg.Message.Data = map[string]string{
+		"title":        "Đơn hàng mới!",
+		"order_id":     order.ID.Hex(),
+		"time_booking": order.TimeBooking.Format("2006-01-02T15:04:05.000Z"),
+		"total":        strconv.Itoa(order.Total),
 	}
 
 	bodyJSON, _ := json.Marshal(msg)
@@ -77,6 +75,6 @@ func SendMessage(target, title, body string, isTopic bool) error {
 		return fmt.Errorf("FCM lỗi: %s", resp.Status)
 	}
 
-	fmt.Println("✅ Gửi thông báo FCM thành công!")
+	fmt.Println("✅ Gửi thông báo booking FCM thành công!")
 	return nil
 }
