@@ -9,4 +9,5 @@ import (
 func AuthRoutes(r *gin.Engine) {
 	r.GET("/auth/google", handlers.GoogleLogin)
 	r.GET("/auth/google/callback", handlers.GoogleCallback)
+	r.GET("/auth/introspect/:token", handlers.InspectToken)
 }

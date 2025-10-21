@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"myapp/module/user/models"
 	"os"
 	"strconv"
 	"time"
@@ -15,7 +16,7 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID string, role string) (string, error) {
+func GenerateToken(user models.User) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", errors.New("JWT_SECRET chưa được cấu hình")
@@ -29,8 +30,8 @@ func GenerateToken(userID string, role string) (string, error) {
 	}
 
 	claims := JWTClaims{
-		UserID: userID,
-		Role:   role,
+		UserID: user.ID,
+		Role:   string(user.Role),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(expireHours) * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

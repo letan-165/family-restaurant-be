@@ -34,21 +34,22 @@ func GetUserByID(id string) (*models.User, error) {
 	return user, nil
 }
 
-func CreateUser(request models.User) error {
+func CreateOrGetUser(request models.User) (models.User, error) {
 	initRepo()
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	if !request.Role.IsValid() {
-		return errors_code.ROLE_USER_INVALID
+	existingUser, err := userRepo.FindByEmail(ctx, request.Email)
+	if err == nil && existingUser.Email != "" {
+		return existingUser, nil
 	}
 
-	_, err := userRepo.BaseRepo.Insert(ctx, request)
+	request.Role = models.CUSTOMER
+
+	_, err = userRepo.BaseRepo.Insert(ctx, request)
 	if err != nil {
-		if mongo.IsDuplicateKeyError(err) {
-			return errors_code.USER_EXISTS
-		}
-		return err
+		return request, err
 	}
-	return nil
+
+	return request, nil
 }

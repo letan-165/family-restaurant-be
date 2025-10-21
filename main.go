@@ -33,7 +33,8 @@ func main() {
 	//Middlewares
 	r.Use(middlewares.TrimJSONMiddleware())
 	authGroup := r.Group("")
-	//authGroup.Use(middlewares.AuthMiddleware())
+	authGroup.Use(middlewares.AuthMiddleware())
+	authGroup.Use(middlewares.RequireRoles("ADMIN"))
 	//Middlewares-Auth
 	authGroup.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})

@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"net/http"
 	"strings"
 
 	"myapp/module/user/services"
@@ -27,7 +28,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := parts[1]
 		claims, err := services.InspectToken(tokenString)
 		if err != nil {
-			c.JSON(401, gin.H{"error": "Token không hợp lệ", "detail": err.Error()})
+			c.JSON(401, gin.H{"message": "Token không hợp lệ", "error": err.Error()})
 			c.Abort()
 			return
 		}
@@ -36,5 +37,28 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("role", claims.Role)
 
 		c.Next()
+	}
+}
+
+func RequireRoles(roles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		roleValue, exists := c.Get("role")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Không tìm thấy role"})
+			c.Abort()
+			return
+		}
+
+		userRole := roleValue.(string)
+
+		for _, r := range roles {
+			if userRole == r {
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{"error": "Bạn không có quyền truy cập"})
+		c.Abort()
 	}
 }
