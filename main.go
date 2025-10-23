@@ -8,6 +8,8 @@ import (
 	notification_handler "myapp/module/notification/handlers"
 	order_handler "myapp/module/order/handlers"
 	user_handler "myapp/module/user/handlers"
+	"os"
+	"strings"
 
 	"time"
 
@@ -20,9 +22,10 @@ func main() {
 	oauth.InitGoogle()
 
 	r := gin.Default()
+	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000"},
+		AllowOrigins:     allowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -73,6 +76,7 @@ func AuthRoutes(r *gin.Engine, a *gin.RouterGroup) {
 	r.GET("/auth/google", user_handler.GoogleLogin)
 	r.GET("/auth/google/callback", user_handler.GoogleCallback)
 	r.GET("/auth/introspect/:token", user_handler.InspectToken)
+	r.POST("/auth/admin", user_handler.GenerateTokenAdmin)
 }
 
 func FCMRouter(r *gin.Engine, a *gin.RouterGroup) {

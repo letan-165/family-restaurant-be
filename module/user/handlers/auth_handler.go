@@ -75,3 +75,20 @@ func InspectToken(c *gin.Context) {
 		"claims":  claims,
 	})
 }
+
+func GenerateTokenAdmin(c *gin.Context) {
+	var request models.GenerateTokenAdminRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		utils.JSONError(c, err)
+		return
+	}
+	token, err := services.GenerateTokenAdmin(request.Email, request.Secret)
+	if err != nil {
+		utils.JSONError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Xác thực",
+		"claims":  token,
+	})
+}

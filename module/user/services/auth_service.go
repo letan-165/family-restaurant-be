@@ -2,6 +2,8 @@ package services
 
 import (
 	"errors"
+	"fmt"
+	"myapp/common/utils"
 	"myapp/module/user/models"
 	"os"
 	"strconv"
@@ -60,4 +62,30 @@ func InspectToken(tokenString string) (*JWTClaims, error) {
 	}
 
 	return nil, errors.New("token không hợp lệ")
+}
+
+func GenerateTokenAdmin(email string, secret string) (string, error) {
+	initRepo()
+	ctx, cancel := utils.DefaultCtx()
+	defer cancel()
+
+	user, err := userRepo.FindByEmail(ctx, email)
+	if err != nil || user.Email == "" {
+		return "", fmt.Errorf("không tìm thấy user với email: %s", email)
+	}
+
+	if user.Role != models.ADMIN {
+		return "", fmt.Errorf("không có quyền admin")
+	}
+
+	claims := JWTClaims{
+		UserID: user.ID,
+		Role:   string(user.Role),
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt: jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
 }
