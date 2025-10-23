@@ -4,10 +4,10 @@ import (
 	"myapp/common/middlewares"
 	"myapp/config/db"
 	"myapp/config/oauth"
-	routes_item "myapp/module/item/routes"
-	routers_notification "myapp/module/notification/routers"
-	routes_order "myapp/module/order/routers"
-	routes_user "myapp/module/user/routers"
+	item_handler "myapp/module/item/handlers"
+	notification_handler "myapp/module/notification/handlers"
+	order_handler "myapp/module/order/handlers"
+	user_handler "myapp/module/user/handlers"
 
 	"time"
 
@@ -41,10 +41,40 @@ func main() {
 	})
 
 	//Router rest
-	routes_item.ItemRoutes(r)
-	routes_order.OrderRoutes(r)
-	routes_user.AuthRoutes(r)
-	routers_notification.FCMRouter(r)
+	ItemRoutes(r, authGroup)
+	OrderRoutes(r, authGroup)
+	AuthRoutes(r, authGroup)
+	FCMRouter(r, authGroup)
 
 	r.Run(":8080")
+}
+
+func ItemRoutes(r *gin.Engine, a *gin.RouterGroup) {
+	r.GET("/items", item_handler.GetAllItems)
+	r.GET("/items/:id", item_handler.GetItemByID)
+
+	a.POST("/items", item_handler.CreateItem)
+	a.PUT("/items/:id", item_handler.UpdateItem)
+	a.DELETE("/items/:id", item_handler.DeleteItem)
+}
+
+func OrderRoutes(r *gin.Engine, a *gin.RouterGroup) {
+	r.GET("/orders", order_handler.GetAllOrders)
+	r.POST("/orders", order_handler.CreateOrder)
+
+	a.GET("/orders/user/:userID", order_handler.GetAllOrdersByCustomer)
+	a.GET("/orders/:id", order_handler.GetOrderByID)
+	a.PATCH("/orders/info/:id", order_handler.UpdateInfoOrder)
+	a.PATCH("/orders/status/:id/:status", order_handler.UpdatePendingOrder)
+	a.PATCH("/orders/completed/:id", order_handler.UpdateConfirmOrder)
+}
+
+func AuthRoutes(r *gin.Engine, a *gin.RouterGroup) {
+	r.GET("/auth/google", user_handler.GoogleLogin)
+	r.GET("/auth/google/callback", user_handler.GoogleCallback)
+	r.GET("/auth/introspect/:token", user_handler.InspectToken)
+}
+
+func FCMRouter(r *gin.Engine, a *gin.RouterGroup) {
+	r.POST("/test/send", notification_handler.SendNotification)
 }
