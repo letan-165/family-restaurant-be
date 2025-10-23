@@ -23,18 +23,13 @@ type fcmMessage struct {
 
 func SendFCMBooking(order models.Order) error {
 	projectID := os.Getenv("FIREBASE_PROJECT_ID")
-	credPath := os.Getenv("FIREBASE_CREDENTIALS")
+	credsJSON := os.Getenv("FIREBASE_CREDENTIALS_JSON")
 
-	if projectID == "" || credPath == "" {
-		return fmt.Errorf("thiếu FIREBASE_PROJECT_ID hoặc FIREBASE_CREDENTIALS trong .env")
+	if projectID == "" || credsJSON == "" {
+		return fmt.Errorf("thiếu FIREBASE_PROJECT_ID hoặc FIREBASE_CREDENTIALS_JSON trong .env hoặc môi trường")
 	}
 
-	data, err := os.ReadFile(credPath)
-	if err != nil {
-		return fmt.Errorf("không đọc được file credentials: %v", err)
-	}
-
-	conf, err := google.JWTConfigFromJSON(data, "https://www.googleapis.com/auth/firebase.messaging")
+	conf, err := google.JWTConfigFromJSON([]byte(credsJSON), "https://www.googleapis.com/auth/firebase.messaging")
 	if err != nil {
 		return fmt.Errorf("không tạo được JWT config: %v", err)
 	}
@@ -75,6 +70,6 @@ func SendFCMBooking(order models.Order) error {
 		return fmt.Errorf("FCM lỗi: %s", resp.Status)
 	}
 
-	fmt.Println("✅ Gửi thông báo booking FCM thành công!")
+	fmt.Println("Gửi thông báo booking FCM thành công!")
 	return nil
 }
