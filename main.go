@@ -49,7 +49,12 @@ func main() {
 	AuthRoutes(r, authGroup)
 	FCMRouter(r, authGroup)
 
-	r.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	r.Run(":" + port)
+
 }
 
 func ItemRoutes(r *gin.Engine, a *gin.RouterGroup) {
