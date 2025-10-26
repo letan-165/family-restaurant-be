@@ -9,7 +9,6 @@ import (
 	order_handler "myapp/module/order/handlers"
 	user_handler "myapp/module/user/handlers"
 	"os"
-	"strings"
 
 	"time"
 
@@ -22,20 +21,14 @@ func main() {
 	oauth.InitGoogle()
 
 	r := gin.Default()
-	origins := os.Getenv("ALLOWED_ORIGINS")
 
 	corsConfig := cors.Config{
+		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
-	}
-
-	if origins == "*" || origins == "" {
-		corsConfig.AllowAllOrigins = true
-	} else {
-		corsConfig.AllowOrigins = strings.Split(origins, ",")
 	}
 
 	r.Use(cors.New(corsConfig))
