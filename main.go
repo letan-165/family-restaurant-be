@@ -22,16 +22,23 @@ func main() {
 	oauth.InitGoogle()
 
 	r := gin.Default()
-	allowedOrigins := strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",")
+	origins := os.Getenv("ALLOWED_ORIGINS")
 
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     allowedOrigins,
+	corsConfig := cors.Config{
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: false,
 		MaxAge:           12 * time.Hour,
-	}))
+	}
+
+	if origins == "*" || origins == "" {
+		corsConfig.AllowAllOrigins = true
+	} else {
+		corsConfig.AllowOrigins = strings.Split(origins, ",")
+	}
+
+	r.Use(cors.New(corsConfig))
 
 	//Middlewares
 	r.Use(middlewares.TrimJSONMiddleware())
