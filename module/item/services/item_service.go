@@ -98,6 +98,8 @@ func UpdateItem(request models.Item) error {
 	}
 
 	update := map[string]interface{}{
+		"index": request.Index,
+		"img":   request.Img,
 		"name":  request.Name,
 		"type":  request.Type,
 		"price": request.Price,

@@ -14,6 +14,8 @@ const (
 
 type Item struct {
 	ID    primitive.ObjectID `bson:"_id" json:"id"`
+	Img   string             `bson:"img" json:"img"`
+	Index int                `bson:"index" json:"index"`
 	Name  string             `bson:"name" json:"name"`
 	Type  ItemType           `bson:"type" json:"type"`
 	Price int                `bson:"price" json:"price"`

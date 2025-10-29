@@ -54,6 +54,14 @@ func InitCollections() {
 		log.Fatalf("Không thể tạo index cho items.name: %v", err)
 	}
 
+	itemIndexIndex := mongo.IndexModel{
+		Keys:    bson.M{"index": 1},
+		Options: options.Index().SetUnique(true),
+	}
+	if _, err := ItemCollection.Indexes().CreateOne(context.TODO(), itemIndexIndex); err != nil {
+		log.Fatalf("Không thể tạo index cho items.index: %v", err)
+	}
+
 	userIndex := mongo.IndexModel{
 		Keys:    bson.M{"email": 1},
 		Options: options.Index().SetUnique(true),
