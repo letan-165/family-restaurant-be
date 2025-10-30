@@ -26,9 +26,21 @@ func GetAllOrders(c *gin.Context) {
 }
 
 func GetAllOrdersByCustomer(c *gin.Context) {
+	paramUserID := c.Param("userID")
+	claimsUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(401, gin.H{"message": "Missing userID in token"})
+		return
+	}
+
+	if paramUserID != claimsUserID {
+		c.JSON(403, gin.H{"message": "Forbidden: bạn không được phép xem đơn hàng của người khác"})
+		return
+	}
+
 	page, limit, sortField, sortOrder, status := utils.ParsePaginationQuery(c)
 
-	orders, total, err := services.GetAllOrdersByCustomer(c.Param("userID"), page, limit, sortField, sortOrder, status)
+	orders, total, err := services.GetAllOrdersByCustomer(paramUserID, page, limit, sortField, sortOrder, status)
 	if err != nil {
 		utils.JSONError(c, err)
 		return

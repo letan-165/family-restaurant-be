@@ -3,11 +3,14 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"myapp/common/utils"
 	"myapp/config/oauth"
 	"myapp/module/user/models"
 	"myapp/module/user/services"
 	"net/http"
+	"net/url"
+	"os"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,12 +59,12 @@ func GoogleCallback(c *gin.Context) {
 		c.JSON(500, gin.H{"error": "Tạo JWT thất bại"})
 		return
 	}
+	webCallbackURL := os.Getenv("WEB_CALLBACK_URL")
+	name := url.QueryEscape(user.Name)
+	picture := url.QueryEscape(user.Picture)
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Đăng nhập thành công",
-		"email":   userInfo.Email,
-		"token":   jwtToken,
-	})
+	callbackURL := fmt.Sprintf("%s?id=%s&name=%s&picture=%s&token=%s", webCallbackURL,user.ID, name, picture, jwtToken)
+	c.Redirect(http.StatusFound, callbackURL)
 }
 
 func InspectToken(c *gin.Context) {

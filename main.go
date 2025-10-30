@@ -8,6 +8,7 @@ import (
 	notification_handler "myapp/module/notification/handlers"
 	order_handler "myapp/module/order/handlers"
 	user_handler "myapp/module/user/handlers"
+	"myapp/module/user/models"
 	"os"
 
 	"time"
@@ -35,19 +36,24 @@ func main() {
 
 	//Middlewares
 	r.Use(middlewares.TrimJSONMiddleware())
-	authGroup := r.Group("")
-	authGroup.Use(middlewares.AuthMiddleware())
-	authGroup.Use(middlewares.RequireRoles("ADMIN"))
+	adminGroup := r.Group("")
+	adminGroup.Use(middlewares.AuthMiddleware())
+	adminGroup.Use(middlewares.RequireRoles(string(models.ADMIN)))
+
+	customerGroup := r.Group("")
+	customerGroup.Use(middlewares.AuthMiddleware())
+	customerGroup.Use(middlewares.RequireRoles(string(models.CUSTOMER)))
+
 	//Middlewares-Auth
-	authGroup.GET("/ping", func(c *gin.Context) {
+	adminGroup.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
 	//Router rest
-	ItemRoutes(r, authGroup)
-	OrderRoutes(r, authGroup)
-	AuthRoutes(r, authGroup)
-	FCMRouter(r, authGroup)
+	ItemRoutes(r, adminGroup)
+	OrderRoutes(r, adminGroup, customerGroup)
+	AuthRoutes(r, adminGroup)
+	FCMRouter(r, adminGroup)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -66,11 +72,12 @@ func ItemRoutes(r *gin.Engine, a *gin.RouterGroup) {
 	a.DELETE("/items/:id", item_handler.DeleteItem)
 }
 
-func OrderRoutes(r *gin.Engine, a *gin.RouterGroup) {
+func OrderRoutes(r *gin.Engine, a *gin.RouterGroup, c *gin.RouterGroup) {
 	r.GET("/orders", order_handler.GetAllOrders)
 	r.POST("/orders", order_handler.CreateOrder)
 
-	a.GET("/orders/user/:userID", order_handler.GetAllOrdersByCustomer)
+	c.GET("/orders/user/:userID", order_handler.GetAllOrdersByCustomer)
+	
 	a.GET("/orders/:id", order_handler.GetOrderByID)
 	a.PATCH("/orders/info/:id", order_handler.UpdateInfoOrder)
 	a.PATCH("/orders/status/:id/:status", order_handler.UpdatePendingOrder)
