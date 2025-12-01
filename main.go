@@ -98,6 +98,5 @@ func FCMRouter(r *gin.Engine, a *gin.RouterGroup) {
 }
 
 func StatsRoutes(r *gin.Engine, a *gin.RouterGroup) {
-	a.GET("/stats", stats_handler.GetAllStats)
 	r.POST("/stats/visit", stats_handler.Visit)
 }
