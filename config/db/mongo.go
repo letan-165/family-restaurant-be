@@ -56,7 +56,6 @@ func InitCollections() {
 		{ItemCollection, "name", true},
 		{ItemCollection, "index", true},
 		{UserCollection, "email", true},
-		{StatsCollection, "ip", true},
 	}
 
 	for _, idx := range indexes {

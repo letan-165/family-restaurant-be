@@ -4,8 +4,6 @@ import (
 	"myapp/common/utils"
 	"myapp/module/stats/models"
 	"myapp/module/stats/repository"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 var statsRepo *repository.StatsRepository
@@ -47,8 +45,8 @@ func Visit(request models.Stats) (error) {
 	ctx, cancel := utils.DefaultCtx()
 	defer cancel()
 
-	existingStats, err := statsRepo.FindByIp(ctx, request.Ip)
-	if err == nil && existingStats.Ip != "" {
+	existingStats, err := statsRepo.BaseRepo.FindByID(ctx, request.ID)
+	if err == nil {
 		update := map[string]interface{}{
 			"countVisit": existingStats.CountVisit + 1 ,
 			"lastTime":   request.LastTime,
@@ -58,7 +56,6 @@ func Visit(request models.Stats) (error) {
 		return nil
 	}
 
-	request.ID = primitive.NewObjectID()
 	request.CountVisit = 1
 	_, err = statsRepo.BaseRepo.Insert(ctx, request)
 	if err != nil {
