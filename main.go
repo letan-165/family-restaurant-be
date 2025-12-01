@@ -7,6 +7,7 @@ import (
 	item_handler "myapp/module/item/handlers"
 	notification_handler "myapp/module/notification/handlers"
 	order_handler "myapp/module/order/handlers"
+	stats_handler "myapp/module/stats/handlers"
 	user_handler "myapp/module/user/handlers"
 	"myapp/module/user/models"
 	"os"
@@ -45,7 +46,7 @@ func main() {
 	customerGroup.Use(middlewares.RequireRoles(string(models.CUSTOMER)))
 
 	//Middlewares-Auth
-	adminGroup.GET("/ping", func(c *gin.Context) {
+	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
@@ -54,6 +55,7 @@ func main() {
 	OrderRoutes(r, adminGroup, customerGroup)
 	AuthRoutes(r, adminGroup)
 	FCMRouter(r, adminGroup)
+	StatsRoutes(r, adminGroup)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -93,4 +95,9 @@ func AuthRoutes(r *gin.Engine, a *gin.RouterGroup) {
 
 func FCMRouter(r *gin.Engine, a *gin.RouterGroup) {
 	r.POST("/test/send", notification_handler.SendNotification)
+}
+
+func StatsRoutes(r *gin.Engine, a *gin.RouterGroup) {
+	a.GET("/stats", stats_handler.GetAllStats)
+	r.POST("/stats/visit", stats_handler.Visit)
 }

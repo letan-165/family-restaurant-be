@@ -16,6 +16,7 @@ var DB *mongo.Database
 var ItemCollection *mongo.Collection
 var OrderCollection *mongo.Collection
 var UserCollection *mongo.Collection
+var StatsCollection *mongo.Collection
 
 func ConnectMongo() {
 	godotenv.Load()
@@ -40,34 +41,32 @@ func ConnectMongo() {
 
 	InitCollections()
 }
-
 func InitCollections() {
 	ItemCollection = DB.Collection("items")
 	OrderCollection = DB.Collection("orders")
 	UserCollection = DB.Collection("users")
+	StatsCollection = DB.Collection("stats")
 
-	itemIndex := mongo.IndexModel{
-		Keys:    bson.M{"name": 1},
-		Options: options.Index().SetUnique(true),
-	}
-	if _, err := ItemCollection.Indexes().CreateOne(context.TODO(), itemIndex); err != nil {
-		log.Fatalf("Không thể tạo index cho items.name: %v", err)
-	}
 
-	itemIndexIndex := mongo.IndexModel{
-		Keys:    bson.M{"index": 1},
-		Options: options.Index().SetUnique(true),
-	}
-	if _, err := ItemCollection.Indexes().CreateOne(context.TODO(), itemIndexIndex); err != nil {
-		log.Fatalf("Không thể tạo index cho items.index: %v", err)
+	indexes := []struct {
+		coll   *mongo.Collection
+		field  string
+		unique bool
+	}{
+		{ItemCollection, "name", true},
+		{ItemCollection, "index", true},
+		{UserCollection, "email", true},
+		{StatsCollection, "ip", true},
 	}
 
-	userIndex := mongo.IndexModel{
-		Keys:    bson.M{"email": 1},
-		Options: options.Index().SetUnique(true),
-	}
-	if _, err := UserCollection.Indexes().CreateOne(context.TODO(), userIndex); err != nil {
-		log.Fatalf("Không thể tạo index cho users.email: %v", err)
+	for _, idx := range indexes {
+		model := mongo.IndexModel{
+			Keys:    bson.M{idx.field: 1},
+			Options: options.Index().SetUnique(idx.unique),
+		}
+		if _, err := idx.coll.Indexes().CreateOne(context.TODO(), model); err != nil {
+			log.Fatalf("Không thể tạo index cho %s.%s: %v", idx.coll.Name(), idx.field, err)
+		}
 	}
 
 	log.Println("Đã khởi tạo collections và indexes thành công!")
